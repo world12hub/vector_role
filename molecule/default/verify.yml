@@ -1,10 +1,18 @@
 ---
-# Purpose: assert that the instance really ended up in the expected state.
-# Molecule calls this playbook with `molecule verify`.
 - name: Verify
-  hosts: instance
-  gather_facts: false # Quicker, if you do not need facts
+  hosts: all
+  become: true
+  gather_facts: true
   tasks:
-    - name: Assert something
+    - name: Check curl works
+      ansible.builtin.command:
+        cmd: curl --version
+      register: curl_version
+      changed_when: false
+      failed_when: curl_version.rc != 0
+
+    - name: Assert curl installed
       ansible.builtin.assert:
-        that: true
+        that:
+          - curl_version.rc == 0
+        success_msg: "curl is installed and works"

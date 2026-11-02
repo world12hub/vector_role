@@ -1,131 +1,50 @@
-<<<<<<< HEAD
-# vector-role
-=========
+# Домашнее задание к занятию 5 «Тестирование roles»
 
-An Ansible role that installs and configures [Vector](https://vector.dev/) — a tool for collecting, transforming and shipping logs and metrics.
-The role downloads and installs the Vector RPM package of a given version, deploys `vector.toml` from a Jinja2 template, configures a ClickHouse sink for logs, and restarts the `vector` service when the package or config changes.
+## Подготовка к выполнению
 
-## Requirements
-------------
+1. Установите molecule и его драйвера: `pip3 install "molecule molecule_docker molecule_podman`.
+2. Выполните `docker pull aragast/netology:latest` —  это образ с podman, tox и несколькими пайтонами (3.7 и 3.9) внутри.
 
-- Ansible >= 2.14
-- Target hosts running RHEL/CentOS/Fedora/AlmaLinux/Rocky — the role uses the `dnf` module, so Debian/Ubuntu hosts are not supported as-is.
+## Основная часть
 
-Role Variables
---------------
+Ваша цель — настроить тестирование ваших ролей. 
 
-### defaults/main.yml
+Задача — сделать сценарии тестирования для vector. 
 
-| Variable | Default | Description |
-|---|---|---|
-| `vector_version` | `"0.38.0"` | Vector version to install |
-| `vector_package_url` | `https://packages.timber.io/vector/{{ vector_version }}/vector-{{ vector_version }}-1.{{ ansible_architecture }}.rpm` | RPM package URL |
-| `vector_config_dir` | `/etc/vector` | Configuration directory |
-| `vector_config_file` | `{{ vector_config_dir }}/vector.toml` | Path to the config file |
-| `vector_clickhouse_table` | `events` | Table for logs |
+Ожидаемый результат — все сценарии успешно проходят тестирование ролей.
 
-### vars/main.yml 
+### Molecule
 
-| Variable | Value | Description |
-|---|---|---|
-| `vector_service_name` | `vector` | systemd unit name |
-| `vector_package_name` | `vector` | package name |
-| `vector_tmp_rpm` | `/var/tmp/vector-{{ vector_version }}.rpm` | Temporary RPM path |
-| `vector_config_owner` | `root` | Config file owner |
-| `vector_config_group` | `root` | Config file group |
-| `vector_config_mode` | `0644` | Config file permissions |
+1. Запустите  `molecule test -s ubuntu_xenial` (или с любым другим сценарием, не имеет значения) внутри корневой директории clickhouse-role, посмотрите на вывод команды. Данная команда может отработать с ошибками или не отработать вовсе, это нормально. Наша цель - посмотреть как другие в реальном мире используют молекулу И из чего может состоять сценарий тестирования.
+2. Перейдите в каталог с ролью vector-role и создайте сценарий тестирования по умолчанию при помощи `molecule init scenario --driver-name docker`.
+3. Добавьте несколько разных дистрибутивов (oraclelinux:8, ubuntu:latest) для инстансов и протестируйте роль, исправьте найденные ошибки, если они есть.
+4. Добавьте несколько assert в verify.yml-файл для  проверки работоспособности vector-role (проверка, что конфиг валидный, проверка успешности запуска и др.). 
+5. Запустите тестирование роли повторно и проверьте, что оно прошло успешно.
+5. Добавьте новый тег на коммит с рабочим сценарием в соответствии с семантическим версионированием.
 
-Dependencies
-------------
+### Tox
 
-None.
+1. Добавьте в директорию с vector-role файлы из [директории](./example).
+2. Запустите `docker run --privileged=True -v <path_to_repo>:/opt/vector-role -w /opt/vector-role -it aragast/netology:latest /bin/bash`, где path_to_repo — путь до корня репозитория с vector-role на вашей файловой системе.
+3. Внутри контейнера выполните команду `tox`, посмотрите на вывод.
+5. Создайте облегчённый сценарий для `molecule` с драйвером `molecule_podman`. Проверьте его на исполнимость.
+6. Пропишите правильную команду в `tox.ini`, чтобы запускался облегчённый сценарий.
+8. Запустите команду `tox`. Убедитесь, что всё отработало успешно.
+9. Добавьте новый тег на коммит с рабочим сценарием в соответствии с семантическим версионированием.
 
-Example Playbook
-----------------
+После выполнения у вас должно получится два сценария molecule и один tox.ini файл в репозитории. Не забудьте указать в ответе теги решений Tox и Molecule заданий. В качестве решения пришлите ссылку на  ваш репозиторий и скриншоты этапов выполнения задания. 
 
-Minimal usage with all defaults:
+## Необязательная часть
 
-```yaml
-- name: Install Vector
-  hosts: vector
-  roles:
-    - vector-role
-```
+1. Проделайте схожие манипуляции для создания роли LightHouse.
+2. Создайте сценарий внутри любой из своих ролей, который умеет поднимать весь стек при помощи всех ролей.
+3. Убедитесь в работоспособности своего стека. Создайте отдельный verify.yml, который будет проверять работоспособность интеграции всех инструментов между ними.
+4. Выложите свои roles в репозитории.
 
-Installing the role from a git repository via `requirements.yml`:
+В качестве решения пришлите ссылки и скриншоты этапов выполнения задания.
 
-```yaml
 ---
-- src: git@github.com:yourname/vector-role.git
-  scm: git
-  version: "main"
-  name: vector-role
-```
 
-```bash
-ansible-galaxy role install -r requirements.yml -p roles/
-```
+### Как оформить решение задания
 
-### Tags
-
-The role is tagged for selective execution:
-
-| Tag | What it does |
-|---|---|
-| `vector` | The whole role |
-| `vector-install` | Download and install the package |
-| `vector-config` | Deploy `vector.toml` |
-| `vector-service` | Apply handlers (restart the service) |
-
-```bash
-ansible-playbook site.yml --tags vector-install
-ansible-playbook site.yml --tags vector-install,vector-config
-ansible-playbook site.yml --tags vector
-```
-
-### Handlers
-
-| Handler | Triggered when |
-|---|---|
-| `Restart vector service` | The package is installed or `vector.toml` changes |
-
-### Configuration template
-
-The config is rendered from `templates/vector.toml.j2`. Example output:
-
-```toml
-# Vector configuration
-# Managed by Ansible — do not edit manually
-# Host: {{ inventory_hostname }}
-
-data_dir = "/var/lib/vector"
-
-[sources.journald_logs]
-type = "journald"
-read_from = "beginning"
-
-[sources.app_logs]
-type = "file"
-include = ["/var/log/*.log"]
-ignore_older_secs = 86400
-
-[sinks.stdout]
-type = "console"
-inputs = ["journald_logs", "app_logs"]
-encoding.codec = "json"
-
-[sinks.clickhouse]
-type = "clickhouse"
-inputs = ["app_logs"]
-endpoint = "http://127.0.0.1:8123"
-database = "logs"
-table = "{{ vector_clickhouse_table | default('events') }}"
-```
-
-License
--------
-
-MIT
-=======
-# vector-role
->>>>>>> 330ab21dfe50ee532e36f9a5fa54c25819bd1cb3
+Выполненное домашнее задание пришлите в виде ссылки на .md-файл в вашем репозитории.
