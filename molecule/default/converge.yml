@@ -1,9 +1,0 @@
----
-- name: Converge
-  hosts: all
-  become: true
-  tasks:
-    - name: Install curl (dnf)
-      ansible.builtin.dnf:
-        name: curl
-        state: present
